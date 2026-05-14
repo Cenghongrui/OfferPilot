@@ -1,0 +1,2054 @@
+openapi: 3.0.3
+info:
+  title: OfferPilot API
+  version: 1.0.0
+  description: OfferPilot 前端实习求职训练工作台后端接口。可直接导入 Apifox。
+servers:
+  - url: /api/v1
+    description: API 前缀
+tags:
+  - name: 账号与用户
+  - name: 今日工作台
+  - name: 面试题库
+  - name: 算法练习
+  - name: 面经笔记
+  - name: 投递看板
+  - name: 模拟面试
+  - name: 个人中心
+  - name: 通知提醒
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      tags: [账号与用户]
+      summary: 用户注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  example: 前端实习生
+                email:
+                  type: string
+                  format: email
+                  example: name@example.com
+                password:
+                  type: string
+                  example: "123456"
+      responses:
+        "200":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: 邮箱已注册或参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/login:
+    post:
+      tags: [账号与用户]
+      summary: 用户登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: name@example.com
+                password:
+                  type: string
+                  example: "123456"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: 登录失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      tags: [账号与用户]
+      summary: 退出登录
+      responses:
+        "200":
+          description: 退出成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /users/me:
+    get:
+      tags: [账号与用户]
+      summary: 获取当前用户
+      responses:
+        "200":
+          description: 当前用户信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [账号与用户]
+      summary: 更新个人设置
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 前端冲刺选手
+                goal:
+                  type: string
+                  example: 每天复习 5 道题，并完成 1 次投递跟进
+                notifications:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: 更新后的用户信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/User"
+  /dashboard/overview:
+    get:
+      tags: [今日工作台]
+      summary: 获取工作台概览
+      responses:
+        "200":
+          description: 工作台统计、掌握度和薄弱知识点
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/DashboardOverview"
+  /dashboard/today-plan:
+    get:
+      tags: [今日工作台]
+      summary: 获取今日学习计划
+      responses:
+        "200":
+          description: 今日学习计划
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TodayPlan"
+  /dashboard/today-plan/{planId}:
+    patch:
+      tags: [今日工作台]
+      summary: 更新计划完成状态
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [completed]
+              properties:
+                completed:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: 更新后的计划
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TodayPlan"
+  /questions:
+    get:
+      tags: [面试题库]
+      summary: 获取题目列表
+      parameters:
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: 搜索标题、答案、标签
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/QuestionCategory"
+        - name: difficulty
+          in: query
+          schema:
+            $ref: "#/components/schemas/Difficulty"
+        - name: starred
+          in: query
+          schema:
+            type: boolean
+        - name: mastered
+          in: query
+          schema:
+            type: boolean
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: 题目分页列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Question"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+    post:
+      tags: [面试题库]
+      summary: 新增题目
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionCreate"
+      responses:
+        "200":
+          description: 新增后的题目
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Question"
+  /questions/stats:
+    get:
+      tags: [面试题库]
+      summary: 获取题库统计
+      responses:
+        "200":
+          description: 题库统计
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/QuestionStats"
+  /questions/{questionId}:
+    get:
+      tags: [面试题库]
+      summary: 获取题目详情
+      parameters:
+        - $ref: "#/components/parameters/QuestionId"
+      responses:
+        "200":
+          description: 题目详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Question"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [面试题库]
+      summary: 更新题目
+      parameters:
+        - $ref: "#/components/parameters/QuestionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionUpdate"
+      responses:
+        "200":
+          description: 更新后的题目
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Question"
+    delete:
+      tags: [面试题库]
+      summary: 删除题目
+      parameters:
+        - $ref: "#/components/parameters/QuestionId"
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+  /questions/{questionId}/star:
+    patch:
+      tags: [面试题库]
+      summary: 切换题目收藏
+      parameters:
+        - $ref: "#/components/parameters/QuestionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [starred]
+              properties:
+                starred:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: 收藏状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: q_js_001
+                          starred:
+                            type: boolean
+                            example: true
+                          updatedAt:
+                            type: string
+                            example: "2026-05-14T09:30:00+08:00"
+  /questions/{questionId}/mastery:
+    patch:
+      tags: [面试题库]
+      summary: 更新掌握状态
+      parameters:
+        - $ref: "#/components/parameters/QuestionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mastered]
+              properties:
+                mastered:
+                  type: boolean
+                  example: true
+                lastReviewedAt:
+                  type: string
+                  example: "2026-05-14"
+      responses:
+        "200":
+          description: 掌握状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: q_js_001
+                          mastered:
+                            type: boolean
+                            example: true
+                          lastReviewedAt:
+                            type: string
+                            example: "2026-05-14"
+                          updatedAt:
+                            type: string
+                            example: "2026-05-14T09:30:00+08:00"
+  /algorithms:
+    get:
+      tags: [算法练习]
+      summary: 获取算法题列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ProblemStatus"
+        - name: difficulty
+          in: query
+          schema:
+            $ref: "#/components/schemas/Difficulty"
+        - name: keyword
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: 算法题分页列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/AlgorithmProblem"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+    post:
+      tags: [算法练习]
+      summary: 新增算法题
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlgorithmProblemCreate"
+      responses:
+        "200":
+          description: 新增后的算法题
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AlgorithmProblem"
+  /algorithms/stats:
+    get:
+      tags: [算法练习]
+      summary: 获取算法统计
+      responses:
+        "200":
+          description: 算法统计
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AlgorithmStats"
+  /algorithms/{problemId}:
+    get:
+      tags: [算法练习]
+      summary: 获取算法题详情
+      parameters:
+        - $ref: "#/components/parameters/ProblemId"
+      responses:
+        "200":
+          description: 算法题详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AlgorithmProblem"
+    patch:
+      tags: [算法练习]
+      summary: 更新算法题
+      parameters:
+        - $ref: "#/components/parameters/ProblemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlgorithmProblemUpdate"
+      responses:
+        "200":
+          description: 更新后的算法题
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AlgorithmProblem"
+  /algorithms/{problemId}/code-draft:
+    patch:
+      tags: [算法练习]
+      summary: 保存代码草稿
+      parameters:
+        - $ref: "#/components/parameters/ProblemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [codeDraft]
+              properties:
+                codeDraft:
+                  type: string
+                  example: "function lengthOfLongestSubstring(s) {\n  return 0\n}"
+      responses:
+        "200":
+          description: 保存成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: lc_003
+                          codeDraft:
+                            type: string
+                          updatedAt:
+                            type: string
+                            example: "2026-05-14T09:30:00+08:00"
+  /algorithms/{problemId}/run:
+    post:
+      tags: [算法练习]
+      summary: 运行测试用例
+      parameters:
+        - $ref: "#/components/parameters/ProblemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, testCases]
+              properties:
+                code:
+                  type: string
+                  example: function lengthOfLongestSubstring(s) { return 3 }
+                testCases:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/TestCaseInput"
+      responses:
+        "200":
+          description: 运行结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RunResult"
+  /experiences:
+    get:
+      tags: [面经笔记]
+      summary: 获取面经列表
+      parameters:
+        - name: round
+          in: query
+          schema:
+            type: string
+            enum: [一面, 二面, HR 面, Offer]
+        - name: result
+          in: query
+          schema:
+            $ref: "#/components/schemas/ExperienceResult"
+        - name: keyword
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: 面经分页列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Experience"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+    post:
+      tags: [面经笔记]
+      summary: 新增面经
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExperienceCreate"
+      responses:
+        "200":
+          description: 新增后的面经
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Experience"
+  /experiences/export:
+    get:
+      tags: [面经笔记]
+      summary: 导出面经 JSON
+      responses:
+        "200":
+          description: 导出数据
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          filename:
+                            type: string
+                            example: offerpilot-experiences-2026-05-14.json
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Experience"
+  /experiences/import:
+    post:
+      tags: [面经笔记]
+      summary: 导入面经 JSON
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ExperienceCreate"
+      responses:
+        "200":
+          description: 导入结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          created:
+                            type: integer
+                            example: 3
+                          updated:
+                            type: integer
+                            example: 0
+                          failed:
+                            type: integer
+                            example: 0
+  /experiences/{experienceId}:
+    get:
+      tags: [面经笔记]
+      summary: 获取面经详情
+      parameters:
+        - $ref: "#/components/parameters/ExperienceId"
+      responses:
+        "200":
+          description: 面经详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Experience"
+    patch:
+      tags: [面经笔记]
+      summary: 更新面经
+      parameters:
+        - $ref: "#/components/parameters/ExperienceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExperienceUpdate"
+      responses:
+        "200":
+          description: 更新后的面经
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Experience"
+    delete:
+      tags: [面经笔记]
+      summary: 删除面经
+      parameters:
+        - $ref: "#/components/parameters/ExperienceId"
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+  /applications:
+    get:
+      tags: [投递看板]
+      summary: 获取投递列表
+      parameters:
+        - name: stage
+          in: query
+          schema:
+            $ref: "#/components/schemas/ApplicationStage"
+        - name: keyword
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 投递列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Application"
+    post:
+      tags: [投递看板]
+      summary: 新增投递
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+      responses:
+        "200":
+          description: 新增后的投递
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Application"
+  /applications/stats:
+    get:
+      tags: [投递看板]
+      summary: 获取投递统计
+      responses:
+        "200":
+          description: 投递统计
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ApplicationStats"
+  /applications/{applicationId}:
+    get:
+      tags: [投递看板]
+      summary: 获取投递详情
+      parameters:
+        - $ref: "#/components/parameters/ApplicationId"
+      responses:
+        "200":
+          description: 投递详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Application"
+    patch:
+      tags: [投递看板]
+      summary: 更新投递
+      parameters:
+        - $ref: "#/components/parameters/ApplicationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationUpdate"
+      responses:
+        "200":
+          description: 更新后的投递
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Application"
+    delete:
+      tags: [投递看板]
+      summary: 删除投递
+      parameters:
+        - $ref: "#/components/parameters/ApplicationId"
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+  /applications/{applicationId}/move:
+    patch:
+      tags: [投递看板]
+      summary: 移动投递卡片
+      parameters:
+        - $ref: "#/components/parameters/ApplicationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromStage, toStage]
+              properties:
+                fromStage:
+                  $ref: "#/components/schemas/ApplicationStage"
+                toStage:
+                  $ref: "#/components/schemas/ApplicationStage"
+                sortOrder:
+                  type: integer
+                  example: 1000
+      responses:
+        "200":
+          description: 移动结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: app_002
+                          stage:
+                            $ref: "#/components/schemas/ApplicationStage"
+                          sortOrder:
+                            type: integer
+                            example: 1000
+                          updatedAt:
+                            type: string
+                            example: "2026-05-14T09:30:00+08:00"
+  /mock-interview/modes:
+    get:
+      tags: [模拟面试]
+      summary: 获取面试模式
+      responses:
+        "200":
+          description: 模式列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/MockMode"
+  /mock-interview/questions/random:
+    get:
+      tags: [模拟面试]
+      summary: 按模式随机抽题
+      parameters:
+        - name: mode
+          in: query
+          required: true
+          schema:
+            type: string
+            example: Vue 专项
+      responses:
+        "200":
+          description: 随机题目
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MockQuestion"
+  /mock-interview/sessions:
+    get:
+      tags: [模拟面试]
+      summary: 获取模拟面试历史
+      parameters:
+        - name: mode
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/MockSessionStatus"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: 会话历史
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/MockSession"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+    post:
+      tags: [模拟面试]
+      summary: 创建模拟面试会话
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode, questionIds]
+              properties:
+                mode:
+                  type: string
+                  example: Vue 专项
+                questionIds:
+                  type: array
+                  items:
+                    type: string
+                  example: [mock_q_001]
+      responses:
+        "200":
+          description: 新建会话
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MockSession"
+  /mock-interview/sessions/{sessionId}:
+    patch:
+      tags: [模拟面试]
+      summary: 更新模拟面试会话
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MockSessionUpdate"
+      responses:
+        "200":
+          description: 更新后的会话
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MockSession"
+  /mock-interview/sessions/{sessionId}/report:
+    post:
+      tags: [模拟面试]
+      summary: 生成面试报告
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionId, scores, duration]
+              properties:
+                questionId:
+                  type: string
+                  example: mock_q_001
+                answerNote:
+                  type: string
+                  example: 从 Proxy、track、trigger、effect 四步回答。
+                scores:
+                  $ref: "#/components/schemas/Scores"
+                duration:
+                  type: integer
+                  example: 300
+      responses:
+        "200":
+          description: 面试报告
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MockReport"
+  /mock-interview/stats:
+    get:
+      tags: [模拟面试]
+      summary: 获取模拟面试统计
+      responses:
+        "200":
+          description: 模拟面试统计
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MockStats"
+  /profile/overview:
+    get:
+      tags: [个人中心]
+      summary: 获取个人中心概览
+      responses:
+        "200":
+          description: 个人中心概览
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ProfileOverview"
+  /notifications:
+    get:
+      tags: [通知提醒]
+      summary: 获取通知列表
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: 通知分页列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Notification"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+  /notifications/unread-count:
+    get:
+      tags: [通知提醒]
+      summary: 获取未读通知数
+      responses:
+        "200":
+          description: 未读数量
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+                            example: 3
+  /notifications/{notificationId}/read:
+    patch:
+      tags: [通知提醒]
+      summary: 标记通知已读
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: notice_001
+      responses:
+        "200":
+          description: 标记成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+      description: 页码
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        default: 20
+      description: 每页数量
+    QuestionId:
+      name: questionId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: q_js_001
+    ProblemId:
+      name: problemId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: lc_003
+    ExperienceId:
+      name: experienceId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: exp_001
+    ApplicationId:
+      name: applicationId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: app_001
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: mock_001
+    PlanId:
+      name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: plan_001
+  responses:
+    Unauthorized:
+      description: 未登录或 token 无效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: ok
+        data:
+          nullable: true
+    OkResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              example: {}
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 40100
+        message:
+          type: string
+          example: 未登录或 token 无效
+        data:
+          nullable: true
+          example: null
+    DeleteResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: exp_001
+                deleted:
+                  type: boolean
+                  example: true
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 100
+    AuthResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user:
+                  $ref: "#/components/schemas/User"
+                accessToken:
+                  type: string
+                  example: jwt-token
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: user_001
+        name:
+          type: string
+          example: 前端实习生
+        email:
+          type: string
+          example: name@example.com
+        goal:
+          type: string
+          example: 每天完成 2 小时学习与 3 道算法题
+        notifications:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          example: "2026-05-14T09:30:00+08:00"
+        updatedAt:
+          type: string
+          example: "2026-05-14T09:30:00+08:00"
+    QuestionCategory:
+      type: string
+      enum: [CSS, JavaScript, Vue, Network, Algorithm]
+      example: JavaScript
+    Difficulty:
+      type: string
+      enum: [easy, medium, hard]
+      example: medium
+    QuestionCreate:
+      type: object
+      required: [title, category, difficulty, answer]
+      properties:
+        title:
+          type: string
+          example: Vue3 响应式原理是什么？
+        category:
+          $ref: "#/components/schemas/QuestionCategory"
+        difficulty:
+          $ref: "#/components/schemas/Difficulty"
+        tags:
+          type: array
+          items:
+            type: string
+          example: [proxy, reactivity]
+        answer:
+          type: string
+          example: Vue3 使用 Proxy 拦截对象读写...
+        followUps:
+          type: array
+          items:
+            type: string
+          example: [ref 和 reactive 的区别？]
+        pitfalls:
+          type: array
+          items:
+            type: string
+          example: [不要忽略依赖收集和触发更新是两个阶段。]
+        note:
+          type: string
+          example: ""
+    QuestionUpdate:
+      allOf:
+        - $ref: "#/components/schemas/QuestionCreate"
+        - type: object
+          properties:
+            mastered:
+              type: boolean
+              example: false
+            starred:
+              type: boolean
+              example: true
+            lastReviewedAt:
+              type: string
+              example: "2026-05-13"
+    Question:
+      allOf:
+        - $ref: "#/components/schemas/QuestionUpdate"
+        - type: object
+          properties:
+            id:
+              type: string
+              example: q_js_001
+            title:
+              type: string
+              example: 介绍一下事件循环
+            category:
+              $ref: "#/components/schemas/QuestionCategory"
+            difficulty:
+              $ref: "#/components/schemas/Difficulty"
+            tags:
+              type: array
+              items:
+                type: string
+              example: [event-loop, promise, async]
+            answer:
+              type: string
+              example: 同步任务先进入调用栈，异步回调分别进入宏任务或微任务队列。
+            followUps:
+              type: array
+              items:
+                type: string
+              example: [Promise.then 属于什么任务？]
+            pitfalls:
+              type: array
+              items:
+                type: string
+              example: [不要把 async 函数本身说成微任务。]
+            mastered:
+              type: boolean
+              example: false
+            starred:
+              type: boolean
+              example: true
+            lastReviewedAt:
+              type: string
+              example: "2026-05-13"
+            note:
+              type: string
+              example: 结合页面渲染时机再复盘一次。
+            createdAt:
+              type: string
+              example: "2026-05-10T10:00:00+08:00"
+            updatedAt:
+              type: string
+              example: "2026-05-14T09:30:00+08:00"
+    QuestionStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 4
+        starred:
+          type: integer
+          example: 2
+        reviewTodo:
+          type: integer
+          example: 3
+        byCategory:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                $ref: "#/components/schemas/QuestionCategory"
+              total:
+                type: integer
+                example: 1
+              mastered:
+                type: integer
+                example: 0
+    ProblemStatus:
+      type: string
+      enum: [todo, doing, done]
+      example: doing
+    TestCaseInput:
+      type: object
+      properties:
+        id:
+          type: string
+          example: case_001
+        input:
+          type: string
+          example: '"abcabcbb"'
+        expected:
+          type: string
+          example: "3"
+    AlgorithmProblemCreate:
+      type: object
+      required: [title, difficulty]
+      properties:
+        title:
+          type: string
+          example: 无重复字符的最长子串
+        leetcodeUrl:
+          type: string
+          example: https://leetcode.cn/problems/longest-substring-without-repeating-characters/
+        difficulty:
+          $ref: "#/components/schemas/Difficulty"
+        tags:
+          type: array
+          items:
+            type: string
+          example: [sliding-window, hash-map]
+        description:
+          type: string
+          example: 给定一个字符串，找出其中不含重复字符的最长子串长度。
+        idea:
+          type: string
+          example: 使用滑动窗口维护当前无重复区间。
+        complexity:
+          type: string
+          example: 时间复杂度 O(n)，空间复杂度 O(k)。
+        testCases:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestCaseInput"
+    AlgorithmProblemUpdate:
+      allOf:
+        - $ref: "#/components/schemas/AlgorithmProblemCreate"
+        - type: object
+          properties:
+            status:
+              $ref: "#/components/schemas/ProblemStatus"
+            codeDraft:
+              type: string
+              example: function lengthOfLongestSubstring(s) {}
+            notes:
+              type: string
+              example: 注意 left 只能向右移动，不能回退。
+    AlgorithmProblem:
+      allOf:
+        - $ref: "#/components/schemas/AlgorithmProblemUpdate"
+        - type: object
+          properties:
+            id:
+              type: string
+              example: lc_003
+            updatedAt:
+              type: string
+              example: "2026-05-14T09:30:00+08:00"
+    RunResult:
+      type: object
+      properties:
+        status:
+          type: string
+          example: passed
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              input:
+                type: string
+                example: '"abcabcbb"'
+              expected:
+                type: string
+                example: "3"
+              actual:
+                type: string
+                example: "3"
+              passed:
+                type: boolean
+                example: true
+              runtimeMs:
+                type: integer
+                example: 3
+    AlgorithmStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 3
+        done:
+          type: integer
+          example: 1
+        doing:
+          type: integer
+          example: 1
+        todo:
+          type: integer
+          example: 1
+        completionRate:
+          type: integer
+          example: 33
+        reviewCountThisWeek:
+          type: integer
+          example: 2
+    ExperienceResult:
+      type: string
+      enum: [pending, passed, failed]
+      example: pending
+    ExperienceCreate:
+      type: object
+      required: [company, role, round, result]
+      properties:
+        company:
+          type: string
+          example: 字节跳动
+        role:
+          type: string
+          example: 前端实习生
+        city:
+          type: string
+          example: 上海
+        date:
+          type: string
+          example: "2026-04-18"
+        round:
+          type: string
+          example: 一面
+        result:
+          $ref: "#/components/schemas/ExperienceResult"
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExperienceQuestion"
+        review:
+          $ref: "#/components/schemas/ExperienceReview"
+        markdown:
+          type: string
+          example: "### 复盘\n- 响应式原理需要补充 track/trigger。"
+    ExperienceUpdate:
+      $ref: "#/components/schemas/ExperienceCreate"
+    Experience:
+      allOf:
+        - $ref: "#/components/schemas/ExperienceCreate"
+        - type: object
+          properties:
+            id:
+              type: string
+              example: exp_001
+            createdAt:
+              type: string
+              example: "2026-05-10T10:00:00+08:00"
+            updatedAt:
+              type: string
+              example: "2026-05-14T09:30:00+08:00"
+    ExperienceQuestion:
+      type: object
+      properties:
+        category:
+          type: string
+          example: Vue
+        content:
+          type: string
+          example: Vue3 响应式原理是什么？
+    ExperienceReview:
+      type: object
+      properties:
+        good:
+          type: string
+          example: 项目背景和路由权限讲得比较完整。
+        stuck:
+          type: string
+          example: 网络缓存回答不够细。
+        action:
+          type: string
+          example: 补强强缓存、协商缓存和部署缓存策略。
+    ApplicationStage:
+      type: string
+      enum: [todo, applied, exam, interview_1, interview_2, hr, offer, closed]
+      example: interview_1
+    ApplicationCreate:
+      type: object
+      required: [company, role, stage]
+      properties:
+        company:
+          type: string
+          example: 腾讯
+        role:
+          type: string
+          example: 前端开发实习生
+        city:
+          type: string
+          example: 深圳
+        source:
+          type: string
+          example: 官网
+        stage:
+          $ref: "#/components/schemas/ApplicationStage"
+        deadline:
+          type: string
+          example: "2026-05-30"
+        nextAction:
+          type: string
+          example: 准备 Vue 项目深挖
+        notes:
+          type: string
+          example: 重点复习组件通信和权限路由
+    ApplicationUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationCreate"
+        - type: object
+          properties:
+            sortOrder:
+              type: integer
+              example: 1000
+    Application:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationUpdate"
+        - type: object
+          properties:
+            id:
+              type: string
+              example: app_001
+            createdAt:
+              type: string
+              example: "2026-05-10T10:00:00+08:00"
+            updatedAt:
+              type: string
+              example: "2026-05-14T09:30:00+08:00"
+    ApplicationStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 4
+        interviewing:
+          type: integer
+          example: 1
+        offer:
+          type: integer
+          example: 1
+        byStage:
+          type: array
+          items:
+            type: object
+            properties:
+              stage:
+                $ref: "#/components/schemas/ApplicationStage"
+              count:
+                type: integer
+                example: 1
+    MockMode:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Vue 专项
+        desc:
+          type: string
+          example: 响应式、组件通信、Router
+    MockQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+          example: mock_q_001
+        mode:
+          type: string
+          example: Vue 专项
+        title:
+          type: string
+          example: Vue3 响应式原理是什么？
+        prompt:
+          type: string
+          example: 请从 Proxy、依赖收集、触发更新和视图渲染四个层次讲清楚。
+        followUps:
+          type: array
+          items:
+            type: string
+          example: [ref 和 reactive 的区别？, computed 为什么有缓存？]
+        hint:
+          type: string
+          example: 提示：可以按 get 收集、set 触发、effect 重新执行来组织。
+    MockSessionStatus:
+      type: string
+      enum: [idle, running, paused, finished]
+      example: running
+    Scores:
+      type: object
+      properties:
+        accuracy:
+          type: integer
+          example: 4
+        completeness:
+          type: integer
+          example: 3
+        expression:
+          type: integer
+          example: 4
+        projectLink:
+          type: integer
+          example: 3
+    MockSessionUpdate:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/MockSessionStatus"
+        totalSeconds:
+          type: integer
+          example: 120
+        questionSeconds:
+          type: integer
+          example: 35
+        answerNote:
+          type: string
+          example: 从 Proxy、track、trigger、effect 四步回答。
+        scores:
+          $ref: "#/components/schemas/Scores"
+    MockSession:
+      allOf:
+        - $ref: "#/components/schemas/MockSessionUpdate"
+        - type: object
+          properties:
+            id:
+              type: string
+              example: mock_001
+            mode:
+              type: string
+              example: Vue 专项
+            startedAt:
+              type: string
+              example: "2026-05-14T09:30:00+08:00"
+            finishedAt:
+              type: string
+              example: "2026-05-14T09:35:00+08:00"
+            questionIds:
+              type: array
+              items:
+                type: string
+              example: [mock_q_001]
+            report:
+              $ref: "#/components/schemas/MockReport"
+    MockReport:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          example: mock_001
+        total:
+          type: integer
+          example: 14
+        question:
+          type: string
+          example: Vue3 响应式原理是什么？
+        weakness:
+          type: string
+          example: 回答结构还可以更完整，追问需要提前准备例子。
+        suggestion:
+          type: string
+          example: 复习 Vue 专项 的核心概念，并把本次作答笔记沉淀进面经。
+        createdAt:
+          type: string
+          example: "2026-05-14T09:35:00+08:00"
+    MockStats:
+      type: object
+      properties:
+        modeCount:
+          type: integer
+          example: 5
+        sessionCount:
+          type: integer
+          example: 2
+        averageScore:
+          type: number
+          example: 3.5
+        totalDuration:
+          type: integer
+          example: 1800
+    DashboardOverview:
+      type: object
+      properties:
+        stats:
+          type: object
+          properties:
+            studyHoursToday:
+              type: number
+              example: 2.6
+            reviewTodoCount:
+              type: integer
+              example: 12
+            algorithmSolvedCount:
+              type: integer
+              example: 48
+            applicationCount:
+              type: integer
+              example: 8
+            mockInterviewCount:
+              type: integer
+              example: 2
+        changes:
+          type: object
+          additionalProperties:
+            type: number
+          example:
+            studyHoursToday: -3
+            reviewTodoCount: -3
+            algorithmSolvedCount: 16
+        mastery:
+          type: object
+          properties:
+            overall:
+              type: integer
+              example: 68
+            levels:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                    example: 已掌握
+                  value:
+                    type: integer
+                    example: 32
+        weakPoints:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Vue3 响应式原理
+              mastery:
+                type: integer
+                example: 40
+    TodayPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          example: plan_001
+        title:
+          type: string
+          example: Vue3 响应式原理
+        type:
+          type: string
+          example: 知识点
+        startTime:
+          type: string
+          example: "09:00"
+        endTime:
+          type: string
+          example: "10:00"
+        completed:
+          type: boolean
+          example: true
+    ProfileOverview:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        overview:
+          type: object
+          properties:
+            reviewTodoCount:
+              type: integer
+              example: 12
+            activeApplicationCount:
+              type: integer
+              example: 3
+            mockInterviewAverageScore:
+              type: integer
+              example: 14
+        activities:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: act_001
+              type:
+                type: string
+                example: mock
+              title:
+                type: string
+                example: 完成 Vue 专项模拟面试
+              desc:
+                type: string
+                example: 生成一份复盘报告，建议补充 diff 和 key 的追问。
+              createdAt:
+                type: string
+                example: "2026-05-14T09:30:00+08:00"
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          example: notice_001
+        type:
+          type: string
+          example: review
+        title:
+          type: string
+          example: 题库复习提醒
+        content:
+          type: string
+          example: 事件循环和浏览器缓存仍处于待掌握状态。
+        read:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          example: "2026-05-14T09:30:00+08:00"

@@ -10,7 +10,7 @@
                 </el-icon>
                 <div>{{ dayjs(Date.now()).format('YYYY-MM-DD dddd') }}</div>
             </div>
-            <el-button class="notice" type="text">
+            <el-button class="notice" link>
                 <el-icon>
                     <Bell />
                 </el-icon>

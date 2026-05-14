@@ -7,14 +7,14 @@
             <div class="card-content">
               <div class="card-info">
                 <span>今日学习时长</span>
-                <span>2.6<span style="font-size: 16px;">h</span></span>
+                <span>{{ overview.stats.studyHoursToday }}<span style="font-size: 16px;">h</span></span>
               </div>
               <div>
                 <el-icon style="color:#024ae2"><Clock /></el-icon>
               </div>
             </div>
             <div class="card-footer">
-              <div>较昨日 -3</div>
+              <div>较昨日 {{ formatChange(overview.changes.studyHoursToday) }}</div>
             </div>          
           </el-card>
         </el-col>
@@ -23,14 +23,14 @@
             <div class="card-content">
               <div class="card-info">
                 <span>待复习</span>
-                <span>12</span>
+                <span>{{ overview.stats.reviewTodoCount }}</span>
               </div>
               <div>
                 <el-icon style="color:#12778d"><Collection /></el-icon>
               </div>
             </div>
             <div class="card-footer">
-              <div>较昨日 -3</div>
+              <div>较昨日 {{ formatChange(overview.changes.reviewTodoCount) }}</div>
             </div>          
           </el-card>
         </el-col>
@@ -39,14 +39,14 @@
             <div class="card-content">
               <div class="card-info">
                 <span>刷题数量</span>
-                <span>48</span>
+                <span>{{ overview.stats.algorithmSolvedCount }}</span>
               </div>
               <div>
                 <el-icon style="color:#1E6CEF"><Finished /></el-icon>
               </div>
             </div>
             <div class="card-footer">
-              <div>较昨日 +16</div>
+              <div>较昨日 {{ formatChange(overview.changes.algorithmSolvedCount) }}</div>
             </div>          
           </el-card>
         </el-col>
@@ -55,14 +55,14 @@
             <div class="card-content">
               <div class="card-info">
                 <span>投递数量</span>
-                <span>8</span>
+                <span>{{ overview.stats.applicationCount }}</span>
               </div>
               <div>
                 <el-icon style="color:#0D75EA"><Promotion /></el-icon>
               </div>
             </div>
             <div class="card-footer">
-              <div>较昨日 +2</div>
+              <div>较昨日 {{ formatChange(overview.changes.applicationCount) }}</div>
             </div>          
           </el-card>
         </el-col>
@@ -71,14 +71,14 @@
             <div class="card-content">
               <div class="card-info">
                 <span>模拟面试</span>
-                <span>2</span>
+                <span>{{ overview.stats.mockInterviewCount }}</span>
               </div>
               <div>
                 <el-icon style="color:#F58530"><User /></el-icon>
               </div>
             </div>
             <div class="card-footer">
-              <div>较昨日 +1</div>
+              <div>较昨日 {{ formatChange(overview.changes.mockInterviewCount) }}</div>
             </div>          
           </el-card>
         </el-col>
@@ -92,47 +92,20 @@
               <div>今日学习计划</div>
             </div>
             <div class="plan-list">
-              <div class="plan-item active">
-                <div class="check-box">
+              <div
+                v-for="plan in todayPlans"
+                :key="plan.id"
+                class="plan-item"
+                :class="{ active: plan.completed }"
+              >
+                <div class="check-box" @click="togglePlan(plan)">
                   <el-icon><Check /></el-icon>
                 </div>
                 <div class="plan-title">
-                  <span>Vue3 响应式原理</span>
-                  <span class="tag green">知识点</span>
+                  <span>{{ plan.title }}</span>
+                  <span class="tag" :class="planTypeClass(plan.type)">{{ displayPlanType(plan.type) }}</span>
                 </div>
-                <div class="plan-time">09:00 - 10:00</div>
-              </div>
-              <div class="plan-item">
-                <div class="check-box"></div>
-                <div class="plan-title">
-                  <span>LeetCode 题目练习</span>
-                  <span class="tag orange">算法</span>
-                </div>
-                <div class="plan-time">10:30 - 12:00</div>
-              </div>
-              <div class="plan-item">
-                <div class="check-box"></div>
-                <div class="plan-title">
-                  <span>项目：仿掘金首页</span>
-                  <span class="tag blue">项目</span>
-                </div>
-                <div class="plan-time">14:00 - 16:00</div>
-              </div>
-              <div class="plan-item">
-                <div class="check-box"></div>
-                <div class="plan-title">
-                  <span>模板面试：Vue 生态</span>
-                  <span class="tag orange">模拟面试</span>
-                </div>
-                <div class="plan-time">16:30 - 17:30</div>
-              </div>
-              <div class="plan-item">
-                <div class="check-box"></div>
-                <div class="plan-title">
-                  <span>总结回顾</span>
-                  <span class="tag gray">复盘</span>
-                </div>
-                <div class="plan-time">20:00 - 20:30</div>
+                <div class="plan-time">{{ formatPlanTime(plan) }}</div>
               </div>
             </div>
           </el-card>
@@ -145,7 +118,7 @@
             <div class="mastery-content">
               <div class="donut-chart">
                 <div class="donut-center">
-                  <span>68%</span>
+                  <span>{{ overview.mastery.overall }}%</span>
                   <span>总体掌握度</span>
                 </div>
               </div>
@@ -186,40 +159,14 @@
               <div class="more-link">更多 <el-icon><ArrowRight /></el-icon></div>
             </div>
             <div class="weak-list">
-              <div class="weak-item">
+              <div class="weak-item" v-for="point in overview.weakPoints" :key="point.name">
                 <div class="weak-title">
-                  <span>Vue3 响应式原理</span>
-                  <span>40%</span>
+                  <span>{{ point.name }}</span>
+                  <span>{{ point.mastery }}%</span>
                 </div>
-                <div class="weak-progress"><span style="width: 40%;"></span></div>
-              </div>
-              <div class="weak-item">
-                <div class="weak-title">
-                  <span>虚拟 DOM</span>
-                  <span>45%</span>
+                <div class="weak-progress" :class="{ orange: point.mastery >= 50, yellow: point.mastery >= 60 }">
+                  <span :style="{ width: `${point.mastery}%` }"></span>
                 </div>
-                <div class="weak-progress"><span style="width: 45%;"></span></div>
-              </div>
-              <div class="weak-item">
-                <div class="weak-title">
-                  <span>组件通信</span>
-                  <span>50%</span>
-                </div>
-                <div class="weak-progress orange"><span style="width: 50%;"></span></div>
-              </div>
-              <div class="weak-item">
-                <div class="weak-title">
-                  <span>TypeScript 泛型</span>
-                  <span>60%</span>
-                </div>
-                <div class="weak-progress yellow"><span style="width: 60%;"></span></div>
-              </div>
-              <div class="weak-item">
-                <div class="weak-title">
-                  <span>工程化构建</span>
-                  <span>65%</span>
-                </div>
-                <div class="weak-progress yellow"><span style="width: 65%;"></span></div>
               </div>
             </div>
           </el-card>
@@ -242,40 +189,14 @@
                 <div>结果</div>
                 <div>操作</div>
               </div>
-              <div class="table-row">
+              <div class="table-row" v-for="record in recentExperiences" :key="record.id">
                 <div class="company">
-                  <span class="logo bytedance"></span>
-                  <span>字节跳动</span>
+                  <span class="logo" :class="logoClass(record.company)">{{ logoText(record.company) }}</span>
+                  <span>{{ record.company }}</span>
                 </div>
-                <div>前端开发实习生</div>
-                <div>2024-05-21</div>
-                <div><span class="result blue">一面</span></div>
-                <div class="table-actions">
-                  <el-icon><Document /></el-icon>
-                  <el-icon><Delete /></el-icon>
-                </div>
-              </div>
-              <div class="table-row">
-                <div class="company">
-                  <span class="logo alibaba">e2</span>
-                  <span>阿里巴巴</span>
-                </div>
-                <div>前端开发实习生</div>
-                <div>2024-05-20</div>
-                <div><span class="result orange">二面</span></div>
-                <div class="table-actions">
-                  <el-icon><Document /></el-icon>
-                  <el-icon><Delete /></el-icon>
-                </div>
-              </div>
-              <div class="table-row">
-                <div class="company">
-                  <span class="logo tencent"></span>
-                  <span>腾讯</span>
-                </div>
-                <div>前端开发实习生</div>
-                <div>2024-05-19</div>
-                <div><span class="result red">已挂</span></div>
+                <div>{{ record.role }}</div>
+                <div>{{ record.date }}</div>
+                <div><span class="result" :class="roundClass(record.round)">{{ record.round }}</span></div>
                 <div class="table-actions">
                   <el-icon><Document /></el-icon>
                   <el-icon><Delete /></el-icon>
@@ -332,7 +253,133 @@
 </template>
 
 <script setup>
+import { onMounted, reactive } from 'vue'
+import { dashboardApi, experienceApi } from '@/api/front'
 
+const overview = reactive({
+  stats: {
+    studyHoursToday: 2.6,
+    reviewTodoCount: 12,
+    algorithmSolvedCount: 48,
+    applicationCount: 8,
+    mockInterviewCount: 2
+  },
+  changes: {
+    studyHoursToday: -3,
+    reviewTodoCount: -3,
+    algorithmSolvedCount: 16,
+    applicationCount: 2,
+    mockInterviewCount: 1
+  },
+  mastery: {
+    overall: 68
+  },
+  weakPoints: [
+    { name: 'Vue3 响应式原理', mastery: 40 },
+    { name: '虚拟 DOM', mastery: 45 },
+    { name: '组件通信', mastery: 50 },
+    { name: 'TypeScript 泛型', mastery: 60 },
+    { name: '工程化构建', mastery: 65 }
+  ]
+})
+
+const todayPlans = reactive([
+  { id: 'plan_001', title: 'Vue3 响应式原理', type: '知识点', startTime: '09:00', endTime: '10:00', completed: true },
+  { id: 'plan_002', title: 'LeetCode 题目练习', type: '算法', startTime: '10:30', endTime: '12:00', completed: false },
+  { id: 'plan_003', title: '项目：仿掘金首页', type: '项目', startTime: '14:00', endTime: '16:00', completed: false },
+  { id: 'plan_004', title: '模板面试：Vue 生态', type: '模拟面试', startTime: '16:30', endTime: '17:30', completed: false },
+  { id: 'plan_005', title: '总结回顾', type: '复盘', startTime: '20:00', endTime: '20:30', completed: false }
+])
+
+const recentExperiences = reactive([
+  { id: 'exp_001', company: '字节跳动', role: '前端开发实习生', date: '2026-04-18', round: '一面' },
+  { id: 'exp_002', company: '阿里巴巴', role: '前端开发实习生', date: '2026-04-24', round: '二面' },
+  { id: 'exp_003', company: '腾讯', role: '前端开发实习生', date: '2026-05-02', round: 'HR 面' }
+])
+
+function formatChange(value = 0) {
+  return value > 0 ? `+${value}` : String(value)
+}
+
+function formatClock(value) {
+  if (!value) return '--:--'
+  const date = new Date(value)
+  if (!Number.isNaN(date.getTime())) {
+    return date.toTimeString().slice(0, 5)
+  }
+  return String(value).slice(0, 5)
+}
+
+function formatPlanTime(plan) {
+  return `${formatClock(plan.startTime)} - ${formatClock(plan.endTime)}`
+}
+
+function planTypeClass(type = '') {
+  if (type.includes('算法') || type.includes('面试')) return 'orange'
+  if (type.includes('项目')) return 'blue'
+  if (type.includes('复盘')) return 'gray'
+  return 'green'
+}
+
+function displayPlanType(type = '') {
+  return type.length > 6 ? `${type.slice(0, 6)}...` : type
+}
+
+function logoText(company = '') {
+  return company.length > 2 ? company.slice(0, 1) : ''
+}
+
+function logoClass(company = '') {
+  if (company.includes('字节')) return 'bytedance'
+  if (company.includes('阿里')) return 'alibaba'
+  if (company.includes('腾讯')) return 'tencent'
+  return ''
+}
+
+function roundClass(round = '') {
+  if (round.includes('HR') || round.includes('挂') || round.includes('结束')) return 'red'
+  if (round.includes('二')) return 'orange'
+  return 'blue'
+}
+
+async function loadOverview() {
+  const data = await dashboardApi.getOverview()
+  Object.assign(overview.stats, data.stats || {})
+  Object.assign(overview.changes, data.changes || {})
+  Object.assign(overview.mastery, data.mastery || {})
+  if (Array.isArray(data.weakPoints) && data.weakPoints.length) {
+    overview.weakPoints = data.weakPoints
+  }
+}
+
+async function loadTodayPlans() {
+  const data = await dashboardApi.getTodayPlan()
+  if (Array.isArray(data) && data.length) {
+    todayPlans.splice(0, todayPlans.length, ...data)
+  }
+}
+
+async function togglePlan(plan) {
+  const nextCompleted = !plan.completed
+  plan.completed = nextCompleted
+  try {
+    await dashboardApi.updateTodayPlan(plan.id, { completed: nextCompleted })
+  } catch {
+    plan.completed = !nextCompleted
+  }
+}
+
+async function loadRecentExperiences() {
+  const data = await experienceApi.getList({ page: 1, pageSize: 3 })
+  const list = data.list || data
+  if (Array.isArray(list) && list.length) {
+    recentExperiences.splice(0, recentExperiences.length, ...list.slice(0, 3))
+  }
+}
+
+onMounted(async () => {
+  await Promise.allSettled([loadOverview(), loadTodayPlans(), loadRecentExperiences()])
+})
 </script>
 
 
@@ -517,6 +564,10 @@
 
   .tag {
     flex: 0 0 auto;
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     padding: 3px 8px;
     border-radius: 4px;
     font-size: 13px;
