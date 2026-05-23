@@ -1,5 +1,35 @@
-# Vue 3 + Vite
+# OfferPilot
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+OfferPilot is a Vue 3 interview-prep workbench with a local FastAPI + SQLite backend.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Backend setup
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+```
+
+## Local development
+
+Start the API:
+
+```powershell
+npm.cmd run api
+```
+
+Start the Vue app in another terminal:
+
+```powershell
+npm.cmd run dev
+```
+
+Open `http://127.0.0.1:5173`. The frontend proxies `/api` requests to `http://127.0.0.1:3000`.
+
+The SQLite database is created automatically at `backend/offerpilot.sqlite3`.
+
+For AI mock interviews, add your DeepSeek key to a local `.env` file:
+
+```powershell
+DEEPSEEK_API_KEY=your_deepseek_api_key
+DEEPSEEK_MODEL=deepseekv4-flash
+DEEPSEEK_API_URL=https://api.deepseek.com/chat/completions
+```

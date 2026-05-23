@@ -92,7 +92,9 @@
               <div>今日学习计划</div>
             </div>
             <div class="plan-list">
+              <el-empty v-if="todayPlans.length === 0" description="今日待计划，点击下方按钮添加任务" />
               <div
+                v-else
                 v-for="plan in todayPlans"
                 :key="plan.id"
                 class="plan-item"
@@ -102,10 +104,64 @@
                   <el-icon><Check /></el-icon>
                 </div>
                 <div class="plan-title">
-                  <span>{{ plan.title }}</span>
-                  <span class="tag" :class="planTypeClass(plan.type)">{{ displayPlanType(plan.type) }}</span>
+                  <span
+                    v-if="editingPlanId !== plan.id || editingField !== 'title'"
+                    @dblclick="startEdit(plan, 'title')"
+                    class="editable-text"
+                    :title="'双击编辑'"
+                  >{{ plan.title }}</span>
+                  <el-input
+                    v-else
+                    v-model="editBuffer"
+                    size="small"
+                    @blur="commitEdit(plan)"
+                    @keydown.enter="commitEdit(plan)"
+                    @keydown.escape="cancelEdit"
+                    :ref="(el) => el && el.focus()"
+                  />
+                  <span
+                    v-if="editingPlanId !== plan.id || editingField !== 'type'"
+                    class="tag editable-tag"
+                    :class="planTypeClass(plan.type)"
+                    @dblclick="startEdit(plan, 'type')"
+                    :title="'双击编辑类型'"
+                  >{{ displayPlanType(plan.type) }}</span>
+                  <el-select
+                    v-else
+                    v-model="editBuffer"
+                    size="small"
+                    style="width: 100px"
+                    @change="commitEdit(plan)"
+                    @blur="commitEdit(plan)"
+                    :ref="(el) => el && el.focus()"
+                  >
+                    <el-option v-for="t in planTypes" :key="t" :label="t" :value="t" />
+                  </el-select>
                 </div>
-                <div class="plan-time">{{ formatPlanTime(plan) }}</div>
+                <div class="plan-time">
+                  <span
+                    v-if="editingPlanId !== plan.id || editingField !== 'time'"
+                    @dblclick="startEdit(plan, 'time')"
+                    class="editable-text"
+                    :title="'双击编辑时间'"
+                  >{{ formatPlanTime(plan) }}</span>
+                  <el-input
+                    v-else
+                    v-model="editBuffer"
+                    size="small"
+                    style="width: 100px"
+                    placeholder="09:00-10:00"
+                    @blur="commitEdit(plan)"
+                    @keydown.enter="commitEdit(plan)"
+                    @keydown.escape="cancelEdit"
+                    :ref="(el) => el && el.focus()"
+                  />
+                  <el-icon class="delete-plan" @click="removePlan(plan)"><Close /></el-icon>
+                </div>
+              </div>
+              <div class="add-plan-btn" @click="addPlan">
+                <el-icon><Plus /></el-icon>
+                <span>添加任务</span>
               </div>
             </div>
           </el-card>
@@ -115,7 +171,7 @@
             <div class="middle-header">
               <div>知识点掌握度</div>
             </div>
-            <div class="mastery-content">
+            <div v-if="hasMasteryData" class="mastery-content">
               <div class="donut-chart">
                 <div class="donut-center">
                   <span>{{ overview.mastery.overall }}%</span>
@@ -150,6 +206,7 @@
                 </div>
               </div>
             </div>
+            <el-empty v-else description="暂无题库掌握数据" />
           </el-card>
         </el-col>
         <el-col :span="8">
@@ -159,14 +216,52 @@
               <div class="more-link">更多 <el-icon><ArrowRight /></el-icon></div>
             </div>
             <div class="weak-list">
-              <div class="weak-item" v-for="point in overview.weakPoints" :key="point.name">
+              <el-empty v-if="userWeakPoints.length === 0" description="暂无薄弱知识点，点击下方添加" />
+              <div v-else class="weak-item" v-for="(point, idx) in userWeakPoints" :key="idx">
                 <div class="weak-title">
-                  <span>{{ point.name }}</span>
-                  <span>{{ point.mastery }}%</span>
+                  <span
+                    v-if="editingWeakId !== idx"
+                    @dblclick="startWeakEdit(idx, point)"
+                    class="editable-text"
+                    :title="'双击编辑'"
+                  >{{ point.name }}</span>
+                  <el-input
+                    v-else
+                    v-model="weakEditName"
+                    size="small"
+                    style="width: 140px"
+                    @blur="commitWeakEdit(idx)"
+                    @keydown.enter="commitWeakEdit(idx)"
+                    @keydown.escape="editingWeakId = -1"
+                    :ref="(el) => el && el.focus()"
+                  />
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span
+                      v-if="editingWeakId !== idx"
+                      @dblclick="startWeakEdit(idx, point)"
+                      class="editable-text"
+                    >{{ point.mastery }}%</span>
+                    <el-input-number
+                      v-else
+                      v-model="weakEditMastery"
+                      size="small"
+                      :min="0"
+                      :max="100"
+                      style="width: 80px"
+                      @blur="commitWeakEdit(idx)"
+                      @keydown.enter="commitWeakEdit(idx)"
+                      :ref="(el) => el && el.focus()"
+                    />
+                    <el-icon class="delete-plan" @click="removeWeakPoint(idx)"><Close /></el-icon>
+                  </div>
                 </div>
                 <div class="weak-progress" :class="{ orange: point.mastery >= 50, yellow: point.mastery >= 60 }">
                   <span :style="{ width: `${point.mastery}%` }"></span>
                 </div>
+              </div>
+              <div class="add-plan-btn" @click="addWeakPoint">
+                <el-icon><Plus /></el-icon>
+                <span>添加薄弱点</span>
               </div>
             </div>
           </el-card>
@@ -189,7 +284,8 @@
                 <div>结果</div>
                 <div>操作</div>
               </div>
-              <div class="table-row" v-for="record in recentExperiences" :key="record.id">
+              <el-empty v-if="recentExperiences.length === 0" description="暂无面试记录" />
+              <div v-else class="table-row" v-for="record in recentExperiences" :key="record.id">
                 <div class="company">
                   <span class="logo" :class="logoClass(record.company)">{{ logoText(record.company) }}</span>
                   <span>{{ record.company }}</span>
@@ -211,38 +307,21 @@
               <div>快捷操作</div>
             </div>
             <div class="quick-grid">
-              <div class="quick-item">
-                <el-icon class="blue"><Finished /></el-icon>
-                <span>刷算法题</span>
-              </div>
-              <div class="quick-item">
-                <el-icon class="blue"><Notebook /></el-icon>
-                <span>新建笔记</span>
-              </div>
-              <div class="quick-item">
-                <el-icon class="blue"><Promotion /></el-icon>
-                <span>投递内推</span>
-              </div>
-              <div class="quick-item">
-                <el-icon class="orange"><User /></el-icon>
-                <span>模拟面试</span>
-              </div>
-              <div class="quick-item">
-                <el-icon class="green"><Reading /></el-icon>
-                <span>知识点学习</span>
-              </div>
-              <div class="quick-item">
-                <el-icon class="red"><Close /></el-icon>
-                <span>错题本</span>
-              </div>
-              <div class="quick-item">
-                <el-icon class="blue"><Tickets /></el-icon>
-                <span>面经收集</span>
-              </div>
-              <div class="quick-item">
-                <el-icon class="blue"><Calendar /></el-icon>
-                <span>学习计划</span>
-              </div>
+              <el-tooltip
+                v-for="action in quickActions"
+                :key="action.label"
+                :content="action.disabled ? '施工中...' : ''"
+                :disabled="!action.disabled"
+                placement="top"
+              >
+                <div
+                  :class="['quick-item', { disabled: action.disabled }]"
+                  @click="handleQuickAction(action)"
+                >
+                  <el-icon :class="action.color"><component :is="action.icon" /></el-icon>
+                  <span>{{ action.label }}</span>
+                </div>
+              </el-tooltip>
             </div>
           </el-card>
         </el-col>
@@ -253,8 +332,12 @@
 </template>
 
 <script setup>
-import { onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { dashboardApi, experienceApi } from '@/api/front'
+import { ElMessage } from 'element-plus'
+
+const router = useRouter()
 
 const overview = reactive({
   stats: {
@@ -296,6 +379,168 @@ const recentExperiences = reactive([
   { id: 'exp_002', company: '阿里巴巴', role: '前端开发实习生', date: '2026-04-24', round: '二面' },
   { id: 'exp_003', company: '腾讯', role: '前端开发实习生', date: '2026-05-02', round: 'HR 面' }
 ])
+
+// ——— 每日计划重置 ———
+const PLAN_DATE_KEY = 'offerpilot_plan_date'
+
+function todayKey() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function checkDailyReset() {
+  const stored = localStorage.getItem(PLAN_DATE_KEY)
+  const today = todayKey()
+  if (stored !== today) {
+    todayPlans.splice(0, todayPlans.length)
+    localStorage.setItem(PLAN_DATE_KEY, today)
+  }
+}
+
+// ——— 计划编辑状态 ———
+const editingPlanId = ref('')
+const editingField = ref('')
+const editBuffer = ref('')
+
+const planTypes = ['知识点', '算法', '项目', '模拟面试', '复盘']
+
+function startEdit(plan, field) {
+  editingPlanId.value = plan.id
+  editingField.value = field
+  editBuffer.value = field === 'time' ? '' : (plan[field] || '')
+}
+
+function commitEdit(plan) {
+  const field = editingField.value
+  if (field === 'type') {
+    plan.type = editBuffer.value || plan.type
+  } else if (field === 'time') {
+    const parts = editBuffer.value.split('-').map(s => s.trim())
+    if (parts.length === 2) {
+      plan.startTime = parts[0]
+      plan.endTime = parts[1]
+    }
+  } else {
+    plan[field] = editBuffer.value.trim() || plan[field]
+  }
+  editingPlanId.value = ''
+  editingField.value = ''
+  savePlan(plan)
+}
+
+function cancelEdit() {
+  editingPlanId.value = ''
+  editingField.value = ''
+}
+
+async function savePlan(plan) {
+  try {
+    await dashboardApi.updateTodayPlan(plan.id, {
+      title: plan.title,
+      type: plan.type,
+      startTime: plan.startTime,
+      endTime: plan.endTime,
+      completed: plan.completed
+    })
+  } catch { /* silent */ }
+}
+
+async function addPlan() {
+  const newPlan = {
+    id: 'plan_' + Date.now().toString(36),
+    title: '新任务',
+    type: '知识点',
+    startTime: '09:00',
+    endTime: '10:00',
+    completed: false
+  }
+  todayPlans.push(newPlan)
+  try {
+    await dashboardApi.updateTodayPlan(newPlan.id, newPlan)
+  } catch { /* silent */ }
+}
+
+async function removePlan(plan) {
+  const idx = todayPlans.indexOf(plan)
+  if (idx >= 0) todayPlans.splice(idx, 1)
+}
+
+// ——— 用户自定义薄弱点 ———
+const WEAK_KEY = 'offerpilot_weak_points'
+
+const userWeakPoints = reactive(loadWeakPoints())
+
+function loadWeakPoints() {
+  try {
+    const raw = localStorage.getItem(WEAK_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return [
+    { name: 'Vue3 响应式原理', mastery: 40 },
+    { name: '虚拟 DOM', mastery: 45 },
+    { name: '组件通信', mastery: 50 },
+    { name: 'TypeScript 泛型', mastery: 60 },
+    { name: '工程化构建', mastery: 65 }
+  ]
+}
+
+function saveWeakPoints() {
+  localStorage.setItem(WEAK_KEY, JSON.stringify(userWeakPoints))
+}
+
+const editingWeakId = ref(-1)
+const weakEditName = ref('')
+const weakEditMastery = ref(0)
+
+function startWeakEdit(idx, point) {
+  editingWeakId.value = idx
+  weakEditName.value = point.name
+  weakEditMastery.value = point.mastery
+}
+
+function commitWeakEdit(idx) {
+  const name = weakEditName.value.trim()
+  if (name) {
+    if (idx >= 0 && idx < userWeakPoints.length) {
+      userWeakPoints[idx].name = name
+      userWeakPoints[idx].mastery = Math.min(100, Math.max(0, Number(weakEditMastery.value) || 0))
+    }
+  }
+  editingWeakId.value = -1
+  saveWeakPoints()
+}
+
+function addWeakPoint() {
+  userWeakPoints.push({ name: '新知识点', mastery: 30 })
+  saveWeakPoints()
+}
+
+function removeWeakPoint(idx) {
+  userWeakPoints.splice(idx, 1)
+  editingWeakId.value = -1
+  saveWeakPoints()
+}
+
+// ——— 快捷操作 ———
+const quickActions = [
+  { label: '刷算法题', icon: 'Finished', color: 'blue', route: '/back/algorithm' },
+  { label: '新建笔记', icon: 'Notebook', color: 'blue', route: '/back/question' },
+  { label: '投递内推', icon: 'Promotion', color: 'blue', route: '/back/applications' },
+  { label: '模拟面试', icon: 'User', color: 'orange', route: '/back/mock-interview' },
+  { label: '知识点学习', icon: 'Reading', color: 'green', route: '', disabled: true },
+  { label: '错题本', icon: 'Close', color: 'red', route: '', disabled: true },
+  { label: '面经收集', icon: 'Tickets', color: 'blue', route: '/back/experience' },
+  { label: '学习计划', icon: 'Calendar', color: 'blue', route: '', disabled: true }
+]
+
+function handleQuickAction(action) {
+  if (action.disabled) return
+  if (action.route) router.push(action.route)
+}
+
+const hasMasteryData = computed(() => {
+  return Number(overview.mastery.overall || 0) > 0 || overview.weakPoints.length > 0
+})
 
 function formatChange(value = 0) {
   return value > 0 ? `+${value}` : String(value)
@@ -347,14 +592,14 @@ async function loadOverview() {
   Object.assign(overview.stats, data.stats || {})
   Object.assign(overview.changes, data.changes || {})
   Object.assign(overview.mastery, data.mastery || {})
-  if (Array.isArray(data.weakPoints) && data.weakPoints.length) {
+  if (Array.isArray(data.weakPoints)) {
     overview.weakPoints = data.weakPoints
   }
 }
 
 async function loadTodayPlans() {
   const data = await dashboardApi.getTodayPlan()
-  if (Array.isArray(data) && data.length) {
+  if (Array.isArray(data)) {
     todayPlans.splice(0, todayPlans.length, ...data)
   }
 }
@@ -372,12 +617,13 @@ async function togglePlan(plan) {
 async function loadRecentExperiences() {
   const data = await experienceApi.getList({ page: 1, pageSize: 3 })
   const list = data.list || data
-  if (Array.isArray(list) && list.length) {
+  if (Array.isArray(list)) {
     recentExperiences.splice(0, recentExperiences.length, ...list.slice(0, 3))
   }
 }
 
 onMounted(async () => {
+  checkDailyReset()
   await Promise.allSettled([loadOverview(), loadTodayPlans(), loadRecentExperiences()])
 })
 </script>
@@ -555,10 +801,14 @@ onMounted(async () => {
     }
 
     .plan-time {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       color: #697386;
       font-size: 14px;
       text-align: right;
       white-space: nowrap;
+      justify-content: flex-end;
     }
   }
 
@@ -850,6 +1100,23 @@ onMounted(async () => {
     font-size: 14px;
     font-weight: 600;
     background-color: #fff;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover:not(.disabled) {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    &.disabled {
+      cursor: not-allowed;
+      background-color: #f3f4f6;
+      color: #9ca3af;
+
+      .el-icon {
+        opacity: 0.4;
+      }
+    }
 
     .el-icon {
       margin-bottom: 10px;
@@ -870,6 +1137,54 @@ onMounted(async () => {
 
     .red {
       color: #ef4444;
+    }
+  }
+
+  .editable-text {
+    cursor: text;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background 0.15s;
+
+    &:hover {
+      background: #e8f1ff;
+    }
+  }
+
+  .editable-tag {
+    cursor: pointer;
+  }
+
+  .delete-plan {
+    color: #94a3b8;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.15s;
+
+    &:hover {
+      color: #ef4444;
+    }
+  }
+
+  .add-plan-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    margin-top: 4px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    color: #667085;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+    &:hover {
+      border-color: #2563eb;
+      color: #2563eb;
+      background: #f8faff;
     }
   }
 }

@@ -8,10 +8,15 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.venv/
 dist
 dist-ssr
 *.local
+.env
+__pycache__/
 server/data.json
+backend/*.sqlite3
+backend/*.db
 
 # Editor directories and files
 .vscode/*

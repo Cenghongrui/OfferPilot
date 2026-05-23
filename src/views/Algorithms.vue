@@ -2,13 +2,13 @@
   <div class="op-page algorithms">
     <section class="op-hero">
       <div>
-        <div class="op-eyebrow">Algorithm Lab</div>
-        <h1 class="op-title">算法练习</h1>
-        <p class="op-subtitle">整理实习高频算法题，在同一页面完成题意、思路、代码草稿、测试用例和复盘记录。</p>
+        <div class="op-eyebrow">算法笔记</div>
+        <h1 class="op-title">算法笔记</h1>
+        <p class="op-subtitle">整理实习高频算法题，在同一页面记录题意、标签、代码模板、解题思路和复盘笔记，做题点击题目链接跳转。</p>
       </div>
       <div class="op-actions">
-        <el-button type="primary" :icon="VideoPlay" @click="runCases">运行用例</el-button>
-        <el-button :icon="DocumentChecked" @click="markDone">标记完成</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreateDialog">新增算法题</el-button>
+        <el-button :icon="Refresh" @click="reloadAll">刷新</el-button>
       </div>
     </section>
 
@@ -19,18 +19,19 @@
       </div>
     </section>
 
-    <section class="op-grid algorithm-layout">
-      <aside class="op-card pad">
+    <section class="op-grid algo-layout">
+      <aside class="op-card pad list-panel">
         <div class="op-section-title">
           <span>题目列表</span>
-          <el-select v-model="filterStatus" style="width: 130px">
+          <el-select v-model="filterStatus" style="width: 110px">
             <el-option label="全部" value="all" />
             <el-option label="未开始" value="todo" />
             <el-option label="进行中" value="doing" />
             <el-option label="已完成" value="done" />
           </el-select>
         </div>
-        <div class="op-list">
+        <el-empty v-if="filteredProblems.length === 0" description="暂无算法题" />
+        <div v-else class="op-list algo-list">
           <article
             v-for="problem in filteredProblems"
             :key="problem.id"
@@ -39,157 +40,166 @@
             @click="selectedId = problem.id"
           >
             <div class="op-row">
-              <strong>{{ problem.id }} {{ problem.title }}</strong>
-              <span class="op-tag" :class="difficultyClass(problem.difficulty)">{{ difficultyMap[problem.difficulty] }}</span>
+              <strong>{{ problem.title }}</strong>
             </div>
             <div class="op-tags">
-              <span v-for="tag in problem.tags" :key="tag" class="op-tag">{{ tag }}</span>
+              <span class="op-tag" :class="difficultyClass(problem.difficulty)">{{ difficultyMap[problem.difficulty] || problem.difficulty }}</span>
               <span class="op-tag green" v-if="problem.status === 'done'">已完成</span>
               <span class="op-tag orange" v-else-if="problem.status === 'doing'">进行中</span>
-              <span class="op-tag red" v-else>未开始</span>
+              <span class="op-tag" v-else>未开始</span>
             </div>
           </article>
         </div>
       </aside>
 
-      <main class="op-card pad op-detail">
-        <div class="op-section-title">
-          <span>题目详情</span>
-          <el-link :href="currentProblem.leetcodeUrl" target="_blank" type="primary">LeetCode</el-link>
-        </div>
-        <h3>{{ currentProblem.title }}</h3>
-        <p>{{ currentProblem.description }}</p>
-
-        <el-tabs v-model="activeTab" class="workspace-tabs">
-          <el-tab-pane label="思路模板" name="idea">
-            <div class="note-box">
-              <strong>解题思路</strong>
-              <p>{{ currentProblem.idea }}</p>
-              <strong>复杂度</strong>
-              <p>{{ currentProblem.complexity }}</p>
+      <main class="op-card pad op-detail detail-panel">
+        <template v-if="currentProblem">
+          <div class="op-section-title">
+            <span>题目详情</span>
+            <div>
+              <el-select v-model="currentProblem.status" style="width: 110px" @change="saveProblem">
+                <el-option label="未开始" value="todo" />
+                <el-option label="进行中" value="doing" />
+                <el-option label="已完成" value="done" />
+              </el-select>
             </div>
-          </el-tab-pane>
-          <el-tab-pane label="代码草稿" name="code">
+          </div>
+
+          <div class="detail-field">
+            <label>题目名称</label>
+            <el-input v-model="currentProblem.title" @blur="saveProblem" />
+          </div>
+
+          <div class="detail-field">
+            <label>题目链接</label>
+            <el-input v-model="currentProblem.leetcodeUrl" placeholder="https://leetcode.cn/problems/..." @blur="saveProblem" />
+          </div>
+
+          <div class="detail-field">
+            <label>难度</label>
+            <el-radio-group v-model="currentProblem.difficulty" @change="saveProblem">
+              <el-radio-button value="easy">简单</el-radio-button>
+              <el-radio-button value="medium">中等</el-radio-button>
+              <el-radio-button value="hard">困难</el-radio-button>
+            </el-radio-group>
+          </div>
+
+          <div class="detail-field">
+            <label>标签</label>
+            <el-input v-model="tagsText" placeholder="多个标签用逗号分隔" @blur="saveTags" />
+          </div>
+
+          <div class="detail-field">
+            <label>题目描述</label>
+            <el-input v-model="currentProblem.description" type="textarea" :rows="4" @blur="saveProblem" />
+          </div>
+
+          <div class="detail-field">
+            <label>解题思路</label>
+            <el-input v-model="currentProblem.idea" type="textarea" :rows="4" placeholder="记录解题思路、核心要点和复杂度分析" @blur="saveProblem" />
+          </div>
+
+          <div class="detail-field">
+            <label>代码模板</label>
             <el-input
               v-model="currentProblem.codeDraft"
               type="textarea"
-              :rows="14"
+              :rows="12"
               spellcheck="false"
               class="code-editor"
+              placeholder="记录代码模板或草稿"
               @blur="saveCodeDraft"
             />
-          </el-tab-pane>
-          <el-tab-pane label="测试用例" name="cases">
-            <div class="case-list">
-              <div v-for="test in currentProblem.testCases" :key="test.input" class="case-item">
-                <div>
-                  <span class="op-muted">输入</span>
-                  <code>{{ test.input }}</code>
-                </div>
-                <div>
-                  <span class="op-muted">期望</span>
-                  <code>{{ test.expected }}</code>
-                </div>
-                <div>
-                  <span class="op-muted">结果</span>
-                  <span class="op-tag" :class="runStatusClass">{{ runStatusText }}</span>
-                </div>
-              </div>
-            </div>
-          </el-tab-pane>
-          <el-tab-pane label="复盘" name="review">
-            <el-input v-model="currentProblem.notes" type="textarea" :rows="8" placeholder="记录错因、二刷日期和优化点" @blur="saveProblem" />
-          </el-tab-pane>
-        </el-tabs>
+          </div>
+
+          <div class="detail-field">
+            <label>复盘笔记</label>
+            <el-input v-model="currentProblem.notes" type="textarea" :rows="4" placeholder="记录错因、易错点、二刷日期和优化方向" @blur="saveProblem" />
+          </div>
+        </template>
+        <el-empty v-else description="选择或新增一道算法题后查看详情" />
       </main>
     </section>
+
+    <el-dialog v-model="dialogVisible" title="新增算法题" width="560px">
+      <el-form label-width="88px">
+        <el-form-item label="题目名称" required>
+          <el-input v-model="createForm.title" placeholder="例如：两数之和" />
+        </el-form-item>
+        <el-form-item label="题目链接">
+          <el-input v-model="createForm.leetcodeUrl" placeholder="https://leetcode.cn/problems/..." />
+        </el-form-item>
+        <el-form-item label="难度">
+          <el-radio-group v-model="createForm.difficulty">
+            <el-radio-button value="easy">简单</el-radio-button>
+            <el-radio-button value="medium">中等</el-radio-button>
+            <el-radio-button value="hard">困难</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="标签">
+          <el-input v-model="createForm.tagsText" placeholder="多个标签用逗号分隔" />
+        </el-form-item>
+        <el-form-item label="题目描述">
+          <el-input v-model="createForm.description" type="textarea" :rows="3" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitCreate">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { DocumentChecked, VideoPlay } from '@element-plus/icons-vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Plus, Refresh } from '@element-plus/icons-vue'
 import { algorithmApi } from '@/api/front'
 
 const difficultyMap = { easy: '简单', medium: '中等', hard: '困难' }
-const activeTab = ref('idea')
 const filterStatus = ref('all')
-const selectedId = ref('lc_003')
-const runStatus = ref('idle')
+const selectedId = ref('')
 const remoteStats = ref(null)
+const dialogVisible = ref(false)
 
-const problems = reactive([
-  {
-    id: 'lc_003',
-    title: '无重复字符的最长子串',
-    leetcodeUrl: 'https://leetcode.cn/problems/longest-substring-without-repeating-characters/',
-    difficulty: 'medium',
-    tags: ['sliding-window', 'hash-map'],
-    status: 'doing',
-    description: '给定一个字符串，找出其中不含重复字符的最长子串长度。',
-    idea: '使用滑动窗口维护当前无重复区间，右指针扩展，遇到重复字符时移动左指针到重复字符后一位。',
-    complexity: '时间复杂度 O(n)，空间复杂度 O(k)，k 为字符集大小。',
-    codeDraft: 'function lengthOfLongestSubstring(s) {\n  const map = new Map()\n  let left = 0\n  let ans = 0\n\n  for (let right = 0; right < s.length; right++) {\n    const char = s[right]\n    if (map.has(char) && map.get(char) >= left) {\n      left = map.get(char) + 1\n    }\n    map.set(char, right)\n    ans = Math.max(ans, right - left + 1)\n  }\n\n  return ans\n}',
-    notes: '注意 left 只能向右移动，不能回退。',
-    testCases: [{ input: '"abcabcbb"', expected: 3 }]
-  },
-  {
-    id: 'lc_020',
-    title: '有效的括号',
-    leetcodeUrl: 'https://leetcode.cn/problems/valid-parentheses/',
-    difficulty: 'easy',
-    tags: ['stack'],
-    status: 'done',
-    description: '判断只包含括号的字符串是否有效闭合。',
-    idea: '遇到左括号入栈，遇到右括号时检查栈顶是否匹配。',
-    complexity: '时间复杂度 O(n)，空间复杂度 O(n)。',
-    codeDraft: 'function isValid(s) {\n  const stack = []\n  const pairs = { ")": "(", "]": "[", "}": "{" }\n  for (const char of s) {\n    if (!pairs[char]) stack.push(char)\n    else if (stack.pop() !== pairs[char]) return false\n  }\n  return stack.length === 0\n}',
-    notes: '边界：空栈遇到右括号直接 false。',
-    testCases: [{ input: '"()[]{}"', expected: true }]
-  },
-  {
-    id: 'lc_146',
-    title: 'LRU 缓存',
-    leetcodeUrl: 'https://leetcode.cn/problems/lru-cache/',
-    difficulty: 'hard',
-    tags: ['linked-list', 'hash-map'],
-    status: 'todo',
-    description: '设计一个支持 O(1) get 和 put 的 LRU 缓存。',
-    idea: 'Map 快速定位节点，双向链表维护最近使用顺序。',
-    complexity: 'get/put 时间复杂度 O(1)，空间复杂度 O(capacity)。',
-    codeDraft: '// TODO: Map + 双向链表',
-    notes: '',
-    testCases: [{ input: '["LRUCache","put","get"]', expected: '[null,null,1]' }]
-  }
-])
+const problems = reactive([])
+
+const createForm = reactive({
+  title: '',
+  leetcodeUrl: '',
+  difficulty: 'medium',
+  tagsText: '',
+  description: ''
+})
 
 const filteredProblems = computed(() => {
   if (filterStatus.value === 'all') return problems
   return problems.filter((item) => item.status === filterStatus.value)
 })
 
-const currentProblem = computed(() => problems.find((item) => item.id === selectedId.value) || problems[0])
+const currentProblem = computed(() => problems.find((item) => item.id === selectedId.value) || problems[0] || null)
+
+const tagsText = ref('')
+
+watch(currentProblem, (p) => {
+  tagsText.value = (p?.tags || []).join('，')
+}, { immediate: true })
+
+watch(() => currentProblem.value?.tags, (t) => {
+  if (t) tagsText.value = t.join('，')
+})
 
 const stats = computed(() => [
   { label: '题目总数', value: remoteStats.value?.total ?? problems.length },
   {
     label: '完成率',
-    value: remoteStats.value?.completionRate ? `${remoteStats.value.completionRate}%` : `${Math.round((problems.filter((item) => item.status === 'done').length / problems.length) * 100)}%`
+    value: remoteStats.value?.completionRate
+      ? `${remoteStats.value.completionRate}%`
+      : `${problems.length ? Math.round((problems.filter((item) => item.status === 'done').length / problems.length) * 100) : 0}%`
   },
   { label: '本周复盘', value: remoteStats.value?.reviewCountThisWeek ?? problems.filter((item) => item.notes).length }
 ])
-
-const runStatusText = computed(() => {
-  if (runStatus.value === 'running') return '运行中'
-  if (runStatus.value === 'passed') return '通过'
-  return '待运行'
-})
-
-const runStatusClass = computed(() => {
-  if (runStatus.value === 'passed') return 'green'
-  if (runStatus.value === 'running') return 'orange'
-  return ''
-})
 
 function difficultyClass(difficulty) {
   if (difficulty === 'easy') return 'green'
@@ -197,50 +207,94 @@ function difficultyClass(difficulty) {
   return 'orange'
 }
 
-async function runCases() {
-  runStatus.value = 'running'
-  currentProblem.value.status = 'doing'
-  try {
-    const result = await algorithmApi.runCases(currentProblem.value.id, {
-      code: currentProblem.value.codeDraft,
-      testCases: currentProblem.value.testCases
-    })
-    runStatus.value = result.status === 'failed' ? 'idle' : 'passed'
-  } catch {
-    runStatus.value = 'idle'
-  }
-}
-
-async function markDone() {
-  currentProblem.value.status = 'done'
-  await algorithmApi.update(currentProblem.value.id, { status: 'done' })
-  await loadStats()
-}
-
-async function saveCodeDraft() {
-  await algorithmApi.saveCodeDraft(currentProblem.value.id, {
-    codeDraft: currentProblem.value.codeDraft
-  })
+function makeId() {
+  return 'algo_' + Date.now().toString(36)
 }
 
 async function saveProblem() {
-  await algorithmApi.update(currentProblem.value.id, {
-    notes: currentProblem.value.notes,
-    status: currentProblem.value.status
+  if (!currentProblem.value) return
+  try {
+    await algorithmApi.update(currentProblem.value.id, {
+      title: currentProblem.value.title,
+      leetcodeUrl: currentProblem.value.leetcodeUrl,
+      difficulty: currentProblem.value.difficulty,
+      description: currentProblem.value.description,
+      idea: currentProblem.value.idea,
+      notes: currentProblem.value.notes,
+      status: currentProblem.value.status
+    })
+  } catch {
+    ElMessage.error('保存失败')
+  }
+}
+
+async function saveTags() {
+  if (!currentProblem.value) return
+  currentProblem.value.tags = tagsText.value.split(/[,，]/).map(s => s.trim()).filter(Boolean)
+  await saveProblem()
+}
+
+async function saveCodeDraft() {
+  if (!currentProblem.value) return
+  try {
+    await algorithmApi.saveCodeDraft(currentProblem.value.id, {
+      codeDraft: currentProblem.value.codeDraft
+    })
+  } catch {
+    ElMessage.error('保存代码草稿失败')
+  }
+}
+
+function openCreateDialog() {
+  Object.assign(createForm, {
+    title: '',
+    leetcodeUrl: '',
+    difficulty: 'medium',
+    tagsText: '',
+    description: ''
   })
+  dialogVisible.value = true
+}
+
+async function submitCreate() {
+  if (!createForm.title.trim()) {
+    ElMessage.warning('请填写题目名称')
+    return
+  }
+  const payload = {
+    id: makeId(),
+    title: createForm.title.trim(),
+    leetcodeUrl: createForm.leetcodeUrl.trim(),
+    difficulty: createForm.difficulty,
+    tags: createForm.tagsText.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    description: createForm.description.trim(),
+    status: 'todo',
+    idea: '',
+    complexity: '',
+    codeDraft: '',
+    notes: '',
+    testCases: []
+  }
+  try {
+    const created = await algorithmApi.create(payload)
+    problems.unshift(created)
+    selectedId.value = created.id
+    dialogVisible.value = false
+    ElMessage.success('算法题已新增')
+    await loadStats()
+  } catch {
+    ElMessage.error('新增失败')
+  }
 }
 
 function replaceProblems(list) {
-  if (!Array.isArray(list) || list.length === 0) return
+  if (!Array.isArray(list)) return
   problems.splice(0, problems.length, ...list)
-  selectedId.value = list[0].id
+  selectedId.value = list[0]?.id || ''
 }
 
 async function loadProblems() {
-  const result = await algorithmApi.getList({
-    page: 1,
-    pageSize: 100
-  })
+  const result = await algorithmApi.getList({ page: 1, pageSize: 100 })
   replaceProblems(result.list || result)
 }
 
@@ -248,9 +302,11 @@ async function loadStats() {
   remoteStats.value = await algorithmApi.getStats()
 }
 
-onMounted(async () => {
+async function reloadAll() {
   await Promise.all([loadProblems(), loadStats()])
-})
+}
+
+onMounted(reloadAll)
 </script>
 
 <style src="./workbench.css"></style>
@@ -259,50 +315,44 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-.algorithm-layout {
-  grid-template-columns: 360px minmax(0, 1fr);
+.algo-layout {
+  grid-template-columns: 280px minmax(0, 1fr);
 }
 
-.workspace-tabs {
-  margin-top: 18px;
+.list-panel {
+  overflow: hidden;
 }
 
-.note-box {
-  display: grid;
-  gap: 10px;
-  padding: 16px;
-  border-radius: 8px;
-  background: #f8fafc;
+.algo-list {
+  max-height: calc(100vh - 350px);
+  overflow: auto;
+}
+
+.detail-panel {
+  overflow-y: auto;
+  max-height: calc(100vh - 260px);
+}
+
+.detail-field {
+  margin-bottom: 18px;
+}
+
+.detail-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #172033;
 }
 
 .code-editor :deep(textarea) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
   line-height: 1.6;
 }
 
-.case-list {
-  display: grid;
-  gap: 12px;
-}
-
-.case-item {
-  display: grid;
-  grid-template-columns: 1fr 1fr 120px;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-}
-
-.case-item > div {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 @media (max-width: 1100px) {
-  .algorithm-layout,
-  .case-item {
+  .algo-layout {
     grid-template-columns: 1fr;
   }
 }

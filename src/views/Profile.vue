@@ -2,7 +2,7 @@
   <div class="op-page profile-page">
     <section class="op-hero">
       <div>
-        <div class="op-eyebrow">Profile</div>
+        <div class="op-eyebrow">个人中心</div>
         <h1 class="op-title">个人中心</h1>
         <p class="op-subtitle">查看你的求职准备档案、学习目标和最近训练概览。</p>
       </div>

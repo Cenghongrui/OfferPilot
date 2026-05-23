@@ -2,7 +2,7 @@
   <div class="op-page settings-page">
     <section class="op-hero">
       <div>
-        <div class="op-eyebrow">Account Settings</div>
+        <div class="op-eyebrow">账号设置</div>
         <h1 class="op-title">设置</h1>
         <p class="op-subtitle">维护账号昵称、学习目标和消息提醒偏好。</p>
       </div>

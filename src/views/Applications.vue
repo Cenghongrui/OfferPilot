@@ -2,7 +2,7 @@
   <div class="op-page applications">
     <section class="op-hero">
       <div>
-        <div class="op-eyebrow">Application Kanban</div>
+        <div class="op-eyebrow">投递看板</div>
         <h1 class="op-title">投递看板</h1>
         <p class="op-subtitle">用横向看板管理实习投递流程，拖动卡片即可同步当前阶段和下一步动作。</p>
       </div>
@@ -227,7 +227,7 @@ async function addApplication() {
 }
 
 function replaceApplications(list) {
-  if (!Array.isArray(list) || list.length === 0) return
+  if (!Array.isArray(list)) return
   applications.splice(0, applications.length, ...list)
 }
 

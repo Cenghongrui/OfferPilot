@@ -1,5 +1,16 @@
 import request from '@/utils/request'
 
+function getTokenForChat() {
+  const token = localStorage.getItem('offerpilot_token')
+  if (token) return token
+  try {
+    const session = JSON.parse(localStorage.getItem('offerpilot_session'))
+    return session?.accessToken || session?.token || ''
+  } catch {
+    return ''
+  }
+}
+
 export const authApi = {
   register(data) {
     return request.post('/auth/register', data)
@@ -133,11 +144,11 @@ export const mockInterviewApi = {
   getModes() {
     return request.get('/mock-interview/modes')
   },
-  getRandomQuestion(params) {
-    return request.get('/mock-interview/questions/random', { params })
-  },
   getSessions(params) {
     return request.get('/mock-interview/sessions', { params })
+  },
+  getSession(sessionId) {
+    return request.get(`/mock-interview/sessions/${sessionId}`)
   },
   createSession(data) {
     return request.post('/mock-interview/sessions', data)
@@ -145,8 +156,23 @@ export const mockInterviewApi = {
   updateSession(sessionId, data) {
     return request.patch(`/mock-interview/sessions/${sessionId}`, data)
   },
-  generateReport(sessionId, data) {
-    return request.post(`/mock-interview/sessions/${sessionId}/report`, data)
+  nextQuestion(sessionId) {
+    return request.post(`/mock-interview/sessions/${sessionId}/next-question`)
+  },
+  endSession(sessionId) {
+    return request.post(`/mock-interview/sessions/${sessionId}/end`)
+  },
+  chat(sessionId, message) {
+    const token = getTokenForChat()
+    const base = import.meta.env.VITE_API_BASE_URL || '/api'
+    return fetch(`${base}/mock-interview/sessions/${sessionId}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: JSON.stringify({ message }),
+    })
   },
   getStats() {
     return request.get('/mock-interview/stats')
